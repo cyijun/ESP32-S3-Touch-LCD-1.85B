@@ -35,13 +35,13 @@ enum {
   SR_CMD_STOP_FAN,
 };
 static const sr_cmd_t sr_commands[] = {
-  { 0, "Turn on the light", "TkN nN jc LiT" },
-  { 0, "Switch on the light", "SWgp nN jc LiT" },
-  { 1, "Turn off the light", "TkN eF jc LiT" },
-  { 1, "Switch off the light", "SWgp eF jc LiT" },
-  { 1, "Go dark", "Gb DnRK" },
-  { 2, "Start fan", "STnRT FaN" },
-  { 3, "Stop fan", "STnP FaN" },
+  { 0, "Turn on the light" },
+  { 0, "Switch on the light" },
+  { 1, "Turn off the light" },
+  { 1, "Switch off the light" },
+  { 1, "Go dark" },
+  { 2, "Start fan" },
+  { 3, "Stop fan" },
 };
 
 void onSrEvent(sr_event_t event, int command_id, int phrase_id) {
