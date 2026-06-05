@@ -460,9 +460,8 @@
 
         <!-- 中心信息 -->
         <div class="center-info">
-          <div class="center-percent" id="centerValue" data-od-id="path-0-0-1-2-1-0">68%</div>
-          <div class="center-label" id="centerLabel" data-od-id="path-0-0-1-2-1-1">周用量剩余</div>
-          <div class="center-sub" id="centerSub" data-od-id="path-0-0-1-2-1-2">1,240 / 1,800</div>
+          <div class="center-percent" id="centerValue" data-od-id="path-0-0-1-2-1-0">32%</div>
+          <div class="center-label" id="centerLabel" data-od-id="path-0-0-1-2-1-1">周用量已用</div>
         </div>
       </div>
 
@@ -470,11 +469,11 @@
       <div class="legend">
         <div class="legend-item">
           <div class="legend-dot week"></div>
-          <span class="legend-text">周配额</span>
+          <span class="legend-text">7天</span>
         </div>
         <div class="legend-item">
           <div class="legend-dot window"></div>
-          <span class="legend-text">5h窗口</span>
+          <span class="legend-text">5小时</span>
         </div>
       </div>
     </div>
@@ -496,32 +495,29 @@
   const C_WEEK = 2 * Math.PI * R_WEEK;   // ~741
   const C_WINDOW = 2 * Math.PI * R_WINDOW; // ~590
 
-  // 场景数据
+  // 场景数据（百分比显示已用量）
   const scenarios = {
     normal: {
       weekUsed: 0.32,
       windowUsed: 0.45,
-      weekLabel: '周用量剩余',
-      weekSub: '1,240 / 1,800',
-      centerValue: '68%',
+      weekLabel: '周用量已用',
+      centerValue: '32%',
       tier: 'Allegro',
       status: 'success'
     },
     heavy: {
       weekUsed: 0.65,
       windowUsed: 0.82,
-      weekLabel: '周用量剩余',
-      weekSub: '630 / 1,800',
-      centerValue: '35%',
+      weekLabel: '周用量已用',
+      centerValue: '65%',
       tier: 'Allegro',
       status: 'warning'
     },
     critical: {
       weekUsed: 0.91,
       windowUsed: 0.95,
-      weekLabel: '周用量剩余',
-      weekSub: '162 / 1,800',
-      centerValue: '9%',
+      weekLabel: '周用量已用',
+      centerValue: '91%',
       tier: 'Allegro',
       status: 'danger'
     }
@@ -541,7 +537,6 @@
 
     document.getElementById('centerValue').textContent = s.centerValue;
     document.getElementById('centerLabel').textContent = s.weekLabel;
-    document.getElementById('centerSub').textContent = s.weekSub;
     document.getElementById('planTier').textContent = s.tier;
 
     // 状态点颜色

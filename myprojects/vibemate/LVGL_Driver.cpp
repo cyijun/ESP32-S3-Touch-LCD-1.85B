@@ -7,12 +7,10 @@
 #include "LVGL_Driver.h"
 
 static lv_disp_draw_buf_t draw_buf;
-static lv_color_t buf1[ LVGL_BUF_LEN ];
-static lv_color_t buf2[ LVGL_BUF_LEN];
-// static lv_color_t* buf1 = (lv_color_t*) heap_caps_malloc(LVGL_BUF_LEN , MALLOC_CAP_SPIRAM);
-// static lv_color_t* buf2 = (lv_color_t*) heap_caps_malloc(LVGL_BUF_LEN , MALLOC_CAP_SPIRAM);
-    
-/*  Display flushing 
+static lv_color_t* buf1 = NULL;
+static lv_color_t* buf2 = NULL;
+
+/*  Display flushing
     Displays LVGL content on the LCD
     This function implements associating LVGL data to the LCD screen
 */
@@ -33,12 +31,10 @@ void Lvgl_Touchpad_Read( lv_indev_drv_t * indev_drv, lv_indev_data_t * data )
   } else {
     data->state = LV_INDEV_STATE_REL;
   }
-  if (touch_data.gesture != NONE ) {    
+  if (touch_data.gesture != NONE ) {
+      // Gesture handled by LVGL drag detection; clear to avoid re-processing
+      touch_data.gesture = NONE;
   }
-  touch_data.x = 0;
-  touch_data.y = 0;
-  touch_data.points = 0;
-  touch_data.gesture = NONE;
 }
 void example_increase_lvgl_tick(void *arg)
 {
@@ -52,6 +48,9 @@ void example_increase_lvgl_Loop_tick(void *arg)
 void Lvgl_Init(void)
 {
   lv_init();
+  size_t buf_size = LVGL_BUF_LEN * sizeof(lv_color_t);
+  buf1 = (lv_color_t*)heap_caps_malloc(buf_size, MALLOC_CAP_SPIRAM);
+  buf2 = (lv_color_t*)heap_caps_malloc(buf_size, MALLOC_CAP_SPIRAM);
   lv_disp_draw_buf_init( &draw_buf, buf1, buf2, LVGL_BUF_LEN);
 
   /*Initialize the display*/
@@ -61,7 +60,7 @@ void Lvgl_Init(void)
   disp_drv.hor_res = LCD_WIDTH;
   disp_drv.ver_res = LCD_HEIGHT;
   disp_drv.flush_cb = Lvgl_Display_LCD;
-  disp_drv.full_refresh = 1;                    /**< 1: Always make the whole screen redrawn*/
+  disp_drv.full_refresh = 0;                    /**< 0: Only redraw changed areas*/
   disp_drv.draw_buf = &draw_buf;
   lv_disp_drv_register( &disp_drv );
 

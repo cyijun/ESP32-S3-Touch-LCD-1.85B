@@ -8,5 +8,6 @@ void network_check(void);
 bool network_is_connected(void);
 String network_get_ip(void);
 int network_get_rssi(void);
+bool network_sync_ntp_to_rtc(void);
 
 #endif

@@ -1,0 +1,8 @@
+#ifndef UI_PET_DETAIL_H
+#define UI_PET_DETAIL_H
+
+#include <lvgl.h>
+
+void ui_pet_detail_create(lv_obj_t *parent_tile);
+
+#endif

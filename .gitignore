@@ -1,0 +1,13 @@
+# Sensitive config
+myprojects/vibemate/config.h
+
+# Python cache
+__pycache__/
+*.pyc
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store

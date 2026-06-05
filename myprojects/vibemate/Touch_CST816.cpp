@@ -102,19 +102,17 @@ uint8_t Touch_Read_Data(void) {
   /* touched gesture */
   if (buf[0] != 0x00) 
     touch_data.gesture = (GESTURE)buf[0];
-  if (buf[1] != 0x00) {        
-    noInterrupts(); 
-    /* Number of touched points */
-    touch_data.points = (uint8_t)buf[1];
-    if(touch_data.points > CST816_LCD_TOUCH_MAX_POINTS)
-        touch_data.points = CST816_LCD_TOUCH_MAX_POINTS;
-    /* Fill coordinates */
-    touch_data.x = ((buf[2] & 0x0F) << 8) + buf[3];               
-    touch_data.y = ((buf[4] & 0x0F) << 8) + buf[5];
-      
-    interrupts(); 
-    // printf(" points=%d \r\n",touch_data.points);
+  noInterrupts();
+  /* Number of touched points */
+  touch_data.points = (uint8_t)buf[1];
+  if(touch_data.points > CST816_LCD_TOUCH_MAX_POINTS)
+      touch_data.points = CST816_LCD_TOUCH_MAX_POINTS;
+  /* Fill coordinates */
+  if (touch_data.points > 0) {
+      touch_data.x = ((buf[2] & 0x0F) << 8) + buf[3];
+      touch_data.y = ((buf[4] & 0x0F) << 8) + buf[5];
   }
+  interrupts();
   return true;
 }
 void example_touchpad_read(void){

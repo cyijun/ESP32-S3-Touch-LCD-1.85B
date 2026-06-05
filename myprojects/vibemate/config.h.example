@@ -1,0 +1,17 @@
+#ifndef CONFIG_H
+#define CONFIG_H
+
+// WiFi 配置
+#define WIFI_SSID     "YOUR_WIFI_SSID"
+#define WIFI_PASSWORD "YOUR_WIFI_PASSWORD"
+
+// Kimi API 配置
+#define KIMI_API_KEY  "sk-kimi-YOUR_API_KEY_HERE"
+
+// 刷新间隔（毫秒）
+#define API_REFRESH_INTERVAL_MS  45000
+
+// 背光亮度（0~100）
+#define BACKLIGHT_BRIGHTNESS     80
+
+#endif

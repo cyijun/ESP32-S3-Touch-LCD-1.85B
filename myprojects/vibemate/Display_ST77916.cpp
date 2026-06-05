@@ -477,8 +477,8 @@ int QSPI_Init(void){
     .spi_mode = ESP_PANEL_LCD_SPI_MODE,                      
     .pclk_hz = 5 * 1000 * 1000,       
     .trans_queue_depth = ESP_PANEL_LCD_SPI_TRANS_QUEUE_SZ,            
-    .on_color_trans_done = NULL,                            
-    .user_ctx = NULL,                   
+    .on_color_trans_done = NULL,
+    .user_ctx = NULL,
     .lcd_cmd_bits = ESP_PANEL_LCD_SPI_CMD_BITS,                 
     .lcd_param_bits = ESP_PANEL_LCD_SPI_PARAM_BITS,                
     .flags = {                          
@@ -555,36 +555,46 @@ int QSPI_Init(void){
   // esp_lcd_panel_invert_color(panel_handle,false);
 
   esp_lcd_panel_disp_on_off(panel_handle, true);
-  test_draw_bitmap(panel_handle);
+  // test_draw_bitmap(panel_handle);  // removed: caused color bars on boot
   return 1;
 }
 
 void ST77916_Init() {
   ST7701_Reset();
-  pinMode(ESP_PANEL_LCD_SPI_IO_TE, OUTPUT);
+  pinMode(ESP_PANEL_LCD_SPI_IO_TE, INPUT_PULLUP);
   if(!QSPI_Init()){
     printf("ST77916 Failed to be initialized\r\n");
   }
 }
 
-void LCD_addWindow(uint16_t Xstart, uint16_t Ystart, uint16_t Xend, uint16_t Yend,uint16_t* color)
-{ 
-  uint32_t size = (Xend - Xstart +1 ) * (Yend - Ystart + 1);
-  for (size_t i = 0; i < size; i++) {
-    color[i] = (((color[i] >> 8) & 0xFF) | ((color[i] << 8) & 0xFF00));
+void LCD_addWindow(uint16_t Xstart, uint16_t Ystart, uint16_t Xend, uint16_t Yend, uint16_t* color)
+{
+  uint32_t size = (Xend - Xstart + 1) * (Yend - Ystart + 1);
+
+  // Sync with TE signal before large refreshes to reduce tearing
+  if (size > (EXAMPLE_LCD_WIDTH * EXAMPLE_LCD_HEIGHT / 4)) {
+    uint32_t te_start = micros();
+    while (digitalRead(ESP_PANEL_LCD_SPI_IO_TE) == LOW) {
+      if (micros() - te_start > 5000) break; // 5ms timeout fail-safe
+    }
   }
-  // for (size_t i = 0; i < size; i++) {
-  //   color[i] = 0xFFFF;
-  // }
-  Xend = Xend + 1;      // esp_lcd_panel_draw_bitmap: x_end End index on x-axis (x_end not included)
-  Yend = Yend + 1;      // esp_lcd_panel_draw_bitmap: y_end End index on y-axis (y_end not included)
+
+  uint32_t *p32 = (uint32_t *)color;
+  for (size_t i = 0; i < size / 2; i++) {
+    uint32_t v = p32[i];
+    p32[i] = ((v & 0xFF00FF00) >> 8) | ((v & 0x00FF00FF) << 8);
+  }
+  if (size & 1) {
+    color[size - 1] = (((color[size - 1] >> 8) & 0xFF) | ((color[size - 1] << 8) & 0xFF00));
+  }
+  Xend = Xend + 1;
+  Yend = Yend + 1;
   if (Xend > EXAMPLE_LCD_WIDTH)
     Xend = EXAMPLE_LCD_WIDTH;
   if (Yend > EXAMPLE_LCD_HEIGHT)
     Yend = EXAMPLE_LCD_HEIGHT;
-    
-  // printf("Xstart = %d    Ystart = %d    Xend = %d    Yend = %d \r\n",Xstart, Ystart, Xend, Yend);
-  esp_lcd_panel_draw_bitmap(panel_handle, Xstart, Ystart, Xend, Yend, color);                     // x_end End index on x-axis (x_end not included)
+
+  esp_lcd_panel_draw_bitmap(panel_handle, Xstart, Ystart, Xend, Yend, color);
 }
 
 
