@@ -83,7 +83,7 @@ void ui_usage_create(lv_obj_t *parent_tile) {
     label_percent = lv_label_create(parent_tile);
     lv_label_set_text(label_percent, "0%");
     lv_obj_set_style_text_color(label_percent, lv_color_hex(0xf0f4f8), 0);
-    lv_obj_set_style_text_font(label_percent, &lv_font_montserrat_36, 0);
+    lv_obj_set_style_text_font(label_percent, &lv_font_montserrat_24, 0);
     lv_obj_align(label_percent, LV_ALIGN_CENTER, 0, -10);
 
     label_title = lv_label_create(parent_tile);

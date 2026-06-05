@@ -7,8 +7,10 @@
 #include "ui_usage.h"
 #include "ui_device.h"
 #include "ui_pet.h"
+#include "rtc_bsp.h"
 #include <lvgl.h>
 #include <Wire.h>
+#include <BQ27220.h>
 
 static lv_obj_t *tileview;
 static lv_obj_t *tile_usage;
@@ -17,6 +19,9 @@ static lv_obj_t *tile_pet;
 static lv_timer_t *api_timer = NULL;
 static lv_timer_t *device_timer = NULL;
 static lv_timer_t *ui_timer = NULL;
+
+SemaphoreHandle_t wire_mutex;
+BQ27220 g_bq27220;
 
 static void api_timer_cb(lv_timer_t *timer)
 {
@@ -43,6 +48,7 @@ void setup()
 {
     Serial.begin(115200);
     Serial.println("VibeMate starting...");
+    wire_mutex = xSemaphoreCreateMutex();
 
     I2C_Init();
     Backlight_Init();
@@ -50,6 +56,14 @@ void setup()
     Lvgl_Init();
 
     Set_Backlight(BACKLIGHT_BRIGHTNESS);
+
+    if (!g_bq27220.begin(Wire, 0x55, I2C_SDA_PIN, I2C_SCL_PIN, 400000)) {
+        Serial.println("BQ27220 not found");
+    } else {
+        Serial.println("BQ27220 ready");
+    }
+
+    rtc_init();
 
     network_init();
 

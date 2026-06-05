@@ -28,7 +28,7 @@ void ui_pet_create(lv_obj_t *parent_tile) {
     label_face = lv_label_create(parent_tile);
     lv_label_set_text(label_face, "^_^");
     lv_obj_set_style_text_color(label_face, lv_color_hex(0xf0f4f8), 0);
-    lv_obj_set_style_text_font(label_face, &lv_font_montserrat_36, 0);
+    lv_obj_set_style_text_font(label_face, &lv_font_montserrat_24, 0);
     lv_obj_align(label_face, LV_ALIGN_CENTER, 0, 0);
 
     // Status

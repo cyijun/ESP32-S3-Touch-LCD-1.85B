@@ -1,5 +1,10 @@
 #include "ui_device.h"
 #include "network_manager.h"
+#include "rtc_bsp.h"
+#include <BQ27220.h>
+
+extern BQ27220 g_bq27220;
+extern SemaphoreHandle_t wire_mutex;
 
 static lv_obj_t *label_bat_soc;
 static lv_obj_t *label_bat_detail;
@@ -34,14 +39,14 @@ void ui_device_create(lv_obj_t *parent_tile) {
     bar_bat = lv_bar_create(parent_tile);
     lv_obj_set_size(bar_bat, 200, 12);
     lv_bar_set_range(bar_bat, 0, 100);
-    lv_bar_set_value(bar_bat, 78, LV_ANIM_OFF);
+    lv_bar_set_value(bar_bat, 0, LV_ANIM_OFF);
     lv_obj_set_style_bg_color(bar_bat, lv_color_hex(0x1e293b), LV_PART_MAIN);
     lv_obj_set_style_bg_color(bar_bat, lv_color_hex(0x4ade80), LV_PART_INDICATOR);
     lv_obj_align(bar_bat, LV_ALIGN_TOP_LEFT, 30, y + 20);
 
     // Battery detail text
     label_bat_detail = lv_label_create(parent_tile);
-    lv_label_set_text(label_bat_detail, "SOC: 78% | 4123 mV | -120 mA | 28.5C");
+    lv_label_set_text(label_bat_detail, "SOC: --% | -- mV | -- mA | --C");
     lv_obj_set_style_text_color(label_bat_detail, lv_color_hex(0x94a3b8), 0);
     lv_obj_set_style_text_font(label_bat_detail, &lv_font_montserrat_14, 0);
     lv_obj_align(label_bat_detail, LV_ALIGN_TOP_LEFT, 30, y + 38);
@@ -77,6 +82,27 @@ void ui_device_create(lv_obj_t *parent_tile) {
 void ui_device_update(void) {
     char buf[64];
 
+    // Read BQ27220 battery data
+    int soc = 0;
+    int mv = 0;
+    int ma = 0;
+    float tC = 0.0f;
+
+    if (wire_mutex != NULL && xSemaphoreTake(wire_mutex, pdMS_TO_TICKS(20))) {
+        soc = g_bq27220.readStateOfChargePercent();
+        mv = g_bq27220.readVoltageMillivolts();
+        ma = g_bq27220.readCurrentMilliamps();
+        tC = g_bq27220.readTemperatureCelsius();
+        xSemaphoreGive(wire_mutex);
+
+        lv_bar_set_value(bar_bat, soc, LV_ANIM_ON);
+
+        lv_snprintf(buf, sizeof(buf), "SOC: %d%% | %d mV | %d mA | %.1fC",
+                    soc, mv, ma, tC);
+        lv_label_set_text(label_bat_detail, buf);
+    }
+
+    // WiFi
     int rssi = network_get_rssi();
     lv_snprintf(buf, sizeof(buf), "WiFi: %d dBm", rssi);
     lv_label_set_text(label_wifi, buf);
@@ -85,6 +111,10 @@ void ui_device_update(void) {
     lv_snprintf(buf, sizeof(buf), "IP: %s", ip.c_str());
     lv_label_set_text(label_ip, buf);
 
-    // RTC placeholder for now
-    lv_label_set_text(label_time, "Time: --:--:--");
+    // RTC Time
+    RtcDateTime_t rtc = i2c_rtc_get();
+    lv_snprintf(buf, sizeof(buf), "Time: %04d-%02d-%02d %02d:%02d:%02d",
+                rtc.year, rtc.month, rtc.day,
+                rtc.hour, rtc.minute, rtc.second);
+    lv_label_set_text(label_time, buf);
 }

@@ -2,6 +2,7 @@
 #define KIMI_API_H
 
 #include <Arduino.h>
+#include <lvgl.h>
 
 struct kimi_usage_t {
     // 周限额
