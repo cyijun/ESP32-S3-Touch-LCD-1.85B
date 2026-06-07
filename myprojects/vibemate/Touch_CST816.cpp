@@ -100,11 +100,15 @@ void CST816_AutoSleep(bool Sleep_State) {
 // reads sensor and touches
 // updates Touch Points
 uint8_t Touch_Read_Data(void) {
-  uint8_t buf[6];
-  uint8_t touchpad_cnt = 0;
-  I2C_Read_Touch(CST816_ADDR, CST816_REG_GestureID, buf, 6);
+  uint8_t buf[6] = {0};
+  if (!I2C_Read_Touch(CST816_ADDR, CST816_REG_GestureID, buf, 6)) {
+    /* I2C failed — report "no touch" so LVGL does not think finger is held.
+       Keeping stale coordinates is safer than reporting garbage. */
+    touch_data.points = 0;
+    return false;
+  }
   /* touched gesture */
-  if (buf[0] != 0x00) 
+  if (buf[0] != 0x00)
     touch_data.gesture = (GESTURE)buf[0];
   noInterrupts();
   /* Number of touched points */

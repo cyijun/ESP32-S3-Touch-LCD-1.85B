@@ -46,6 +46,13 @@ static void tileview_event_cb(lv_event_t *e)
     (void)e;
     lv_obj_t *tv = lv_event_get_target(e);
     lv_obj_t *tile = lv_tileview_get_tile_act(tv);
+
+    /* Debounce: ignore repeated events for the same tile.  lv_tileview can
+       fire VALUE_CHANGED multiple times during inertial scroll bounces. */
+    static lv_obj_t *s_last_reported_tile = NULL;
+    if (tile == s_last_reported_tile) return;
+    s_last_reported_tile = tile;
+
     int idx = -1;
     if (tile == tile_pet_select) idx = 0;
     else if (tile == tile_pet_detail) idx = 1;
@@ -74,10 +81,13 @@ static void device_timer_cb(lv_timer_t *timer)
 static void ui_timer_cb(lv_timer_t *timer)
 {
     (void)timer;
-    if (g_ui_needs_update) {
+    if (g_ui_needs_update && kimi_mutex &&
+        xSemaphoreTake(kimi_mutex, pdMS_TO_TICKS(50)) == pdTRUE) {
         g_ui_needs_update = false;
+        kimi_usage_t snapshot = g_kimi_data;
+        xSemaphoreGive(kimi_mutex);
         TRACE_MAIN("ui_timer_cb updating usage");
-        ui_usage_update(&g_kimi_data);
+        ui_usage_update(&snapshot);
     }
 }
 
@@ -181,6 +191,12 @@ void setup()
     lv_obj_set_style_border_width(tile_pet, 0, 0);
     lv_obj_set_style_border_width(tile_usage, 0, 0);
     lv_obj_set_style_border_width(tile_device, 0, 0);
+
+    lv_obj_clear_flag(tile_pet_select, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(tile_pet_detail, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(tile_pet,    LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(tile_usage,  LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(tile_device, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_set_tile(tileview, tile_pet, LV_ANIM_OFF);
     lv_obj_add_event_cb(tileview, tileview_event_cb, LV_EVENT_VALUE_CHANGED, NULL);

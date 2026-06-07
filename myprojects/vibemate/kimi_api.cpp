@@ -11,6 +11,7 @@ bool g_ui_needs_update = false;
 
 static volatile bool s_request_busy = false;
 static TaskHandle_t s_api_task_handle = NULL;
+SemaphoreHandle_t kimi_mutex = NULL;
 
 static float parse_f64(const JsonVariant &value) {
     if (value.is<float>()) {
@@ -56,6 +57,7 @@ void kimi_api_init(void) {
     g_kimi_data.last_error = "";
     g_kimi_data.last_update_ms = 0;
     g_ui_needs_update = false;
+    kimi_mutex = xSemaphoreCreateMutex();
 }
 
 static void s_do_http_request(kimi_usage_t *out)
@@ -167,9 +169,12 @@ static void s_api_task(void *arg)
     kimi_usage_t result;
     s_do_http_request(&result);
 
-    g_kimi_data = result;
-    g_ui_needs_update = true;
-    TRACE_KIMI("API task done ok=%d", g_kimi_data.api_ok);
+    if (kimi_mutex && xSemaphoreTake(kimi_mutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+        g_kimi_data = result;
+        g_ui_needs_update = true;
+        xSemaphoreGive(kimi_mutex);
+    }
+    TRACE_KIMI("API task done ok=%d", result.api_ok);
 
     s_request_busy = false;
     s_api_task_handle = NULL;

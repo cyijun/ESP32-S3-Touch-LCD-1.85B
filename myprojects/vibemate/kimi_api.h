@@ -29,6 +29,7 @@ struct kimi_usage_t {
 // 全局数据实例（定义在 .cpp 中）
 extern kimi_usage_t g_kimi_data;
 extern bool g_ui_needs_update;
+extern SemaphoreHandle_t kimi_mutex;
 
 void kimi_api_init(void);
 void kimi_api_refresh_now(void);
