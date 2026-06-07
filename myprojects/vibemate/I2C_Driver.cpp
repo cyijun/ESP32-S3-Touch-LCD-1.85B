@@ -2,7 +2,8 @@
 
 
 void I2C_Init(void) {
-  Wire.begin( I2C_SDA_PIN, I2C_SCL_PIN);                       
+  Wire.begin( I2C_SDA_PIN, I2C_SCL_PIN);
+  Wire.setTimeOut(50);
 }
 
 

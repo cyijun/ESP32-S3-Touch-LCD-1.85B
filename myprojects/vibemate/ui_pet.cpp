@@ -15,7 +15,6 @@ static lv_obj_t *s_bar_joy;
 static lv_obj_t *s_label_joy;
 static lv_obj_t *s_bubble;
 static lv_obj_t *s_bubble_label;
-static lv_obj_t *s_pet_ring;
 static lv_obj_t *s_label_sprite;
 static lv_obj_t *s_overlay;
 static lv_obj_t *s_hat_menu;
@@ -31,9 +30,7 @@ static lv_obj_t *s_label_play;
 
 // ========== Animation State ==========
 static lv_timer_t *s_timer_float = NULL;
-static lv_timer_t *s_timer_ring = NULL;
 static uint32_t s_anim_frame = 0;
-static uint32_t s_ring_phase = 0;
 
 // ========== Bubble Timer ==========
 static lv_timer_t *s_bubble_timer = NULL;
@@ -42,19 +39,26 @@ static lv_timer_t *s_bubble_timer = NULL;
 static lv_timer_t *s_wiggle_timer = NULL;
 static lv_timer_t *s_jump_timer = NULL;
 static lv_timer_t *s_float_text_timer = NULL;
-static lv_timer_t *s_ring_speed_timer = NULL;
+static lv_timer_t *s_feed_bubble_timer = NULL;
+static lv_timer_t *s_play_bubble_timer = NULL;
+static lv_timer_t *s_auto_bubble_timer = NULL;
 static lv_obj_t *s_float_text_label = NULL;
 static int s_wiggle_step = 0;
 static int s_jump_step = 0;
 static int s_float_text_step = 0;
-static int s_ring_speed_boost = 0;
+
+// ========== Page Active Flag ==========
+static bool s_pet_active = true;
 
 // ========== Touch State ==========
 static uint32_t s_press_tick = 0;
 static uint8_t s_long_triggered = 0;
 static lv_timer_t *s_long_press_timer = NULL;
+static lv_timer_t *s_defer_timer = NULL;
 
 // ========== Message Pools ==========
+
+// Idle messages - shown on talk button or tap
 static const char *IDLE_MESSAGES[] = {
     "在写 bug 呢？需要我帮忙吗？",
     "休息一下吧，眼睛会感谢你的。",
@@ -62,14 +66,98 @@ static const char *IDLE_MESSAGES[] = {
     "我看好你，真的。",
     "你的代码风格…挺有创意的。",
     "这个变量名是认真的吗？",
+    "又在写代码？注意休息。",
+    "这个函数名…很有想象力。",
+    "我看到你删了 200 行代码，干得好。",
+    "编译通过了？不可思议。",
+    "去喝杯水吧，我替你盯着。",
+    "你的光标已经 5 分钟没动了。",
+    "这个 bug 看起来很有意思。",
+    "加油，离下班还有 3 小时。",
+    "你在发呆吗？",
+    "需要我帮你找找灵感吗？",
+    "今天的代码量达标了吗？",
+    "我饿的时候也会脾气不好，你也是吧？",
+    "你屏幕上的光比我的还亮。",
+    "按 Ctrl+S 了吗？",
+    "这个 commit message 可以再敷衍一点。",
 };
 static const int IDLE_MSG_COUNT = sizeof(IDLE_MESSAGES) / sizeof(IDLE_MESSAGES[0]);
 
-static const char *FEED_RESPONSES[] = {"咕咕…", "好吃。", "再来一口。", "满足了。"};
-static const int FEED_RESP_COUNT = sizeof(FEED_RESPONSES) / sizeof(FEED_RESPONSES[0]);
+// Feed responses - categorized by hunger level after eating
+static const char *FEED_HUNGRY_MSGS[] = {
+    "终于…",
+    "等好久了！",
+    "再来一份！",
+    "太及时了！",
+    "救命恩人！",
+};
+static const int FEED_HUNGRY_COUNT = sizeof(FEED_HUNGRY_MSGS) / sizeof(FEED_HUNGRY_MSGS[0]);
 
-static const char *PLAY_RESPONSES[] = {"好快！", "接着！", "开心。", "耶！"};
+static const char *FEED_NORMAL_MSGS[] = {
+    "谢谢款待。",
+    "味道不错。",
+    "刚好饿了。",
+    "好吃~",
+    "正是我想要的。",
+};
+static const int FEED_NORMAL_COUNT = sizeof(FEED_NORMAL_MSGS) / sizeof(FEED_NORMAL_MSGS[0]);
+
+static const char *FEED_FULL_MSGS[] = {
+    "吃不下了…",
+    "肚子圆了。",
+    "满足~",
+    "好撑…",
+    "已经很饱了！",
+};
+static const int FEED_FULL_COUNT = sizeof(FEED_FULL_MSGS) / sizeof(FEED_FULL_MSGS[0]);
+
+static const char *PLAY_RESPONSES[] = {
+    "好玩！",
+    "再来！",
+    "我飞起来了~",
+    "catch me if you can!",
+    "这个比写代码有趣多了。",
+    "耶！",
+};
 static const int PLAY_RESP_COUNT = sizeof(PLAY_RESPONSES) / sizeof(PLAY_RESPONSES[0]);
+
+// Auto bubble messages - pet talks spontaneously
+static const char *AUTO_MESSAGES[] = {
+    "你还在啊？",
+    "我刚刚打了个盹。",
+    "这个屏幕看久了眼睛会酸哦。",
+    "又在写代码？",
+    "我数了一下，你敲了 347 下键盘。",
+    "今天天气怎么样？",
+    "我在思考人生…骗你的，我在想吃的。",
+    "你的代码编译过了吗？",
+    "我有点想你了。",
+    "咕噜咕噜…",
+    "你相信光吗？",
+    "检测到人类活动。",
+};
+static const int AUTO_MSG_COUNT = sizeof(AUTO_MESSAGES) / sizeof(AUTO_MESSAGES[0]);
+
+// Greetings when entering the pet page
+static const char *ENTER_GREETINGS[] = {
+    "你回来了！",
+    "好久不见！",
+    "想我了吗？",
+    "欢迎回来！",
+    "终于等到你了！",
+};
+static const int ENTER_GREET_COUNT = sizeof(ENTER_GREETINGS) / sizeof(ENTER_GREETINGS[0]);
+
+// Hat change responses
+static const char *HAT_RESPONSES[] = {
+    "很适合我！",
+    "这样好看吗？",
+    "有点紧…",
+    "新造型！",
+    "我喜欢这个！",
+};
+static const int HAT_RESP_COUNT = sizeof(HAT_RESPONSES) / sizeof(HAT_RESPONSES[0]);
 
 // ========== Rarity Colors ==========
 static uint32_t rarity_color(PetRarity r)
@@ -99,21 +187,19 @@ static void s_show_hat_menu(void);
 static void s_hide_hat_menu(void);
 static void s_on_hat_pick(lv_event_t *e);
 static void s_anim_float_cb(lv_timer_t *t);
-static void s_ring_pulse_cb(lv_timer_t *t);
 static void s_wiggle_cb(lv_timer_t *t);
 static void s_jump_cb(lv_timer_t *t);
 static void s_float_text_cb(lv_timer_t *t);
-static void s_ring_speed_cb(lv_timer_t *t);
 static void s_overlay_talk_cb(lv_timer_t *t);
 static void s_feed_bubble_cb(lv_timer_t *t);
 static void s_play_bubble_cb(lv_timer_t *t);
 static void s_start_wiggle(void);
 static void s_start_jump(void);
 static void s_show_float_text(const char *text);
-static void s_start_ring_speedup(void);
 static lv_obj_t* s_make_circle_btn(lv_obj_t *parent, const char *icon, const char *text_label,
                                     uint32_t bg_color, uint32_t border_color, uint32_t text_color,
-                                    lv_event_cb_t cb, int x_offset);
+                                    lv_event_cb_t cb, int x_offset,
+                                    const lv_font_t *icon_font);
 
 // ========== Sprite Rendering ==========
 // 5-line sprites (line 0 = hat slot). 3-frame idle animation.
@@ -206,6 +292,11 @@ static void s_hide_bubble_cb(lv_timer_t *t)
 static void s_show_bubble(const char *text, uint32_t duration_ms)
 {
     TRACE_INTERACT_ENTER();
+    if (!s_pet_active) {
+        TRACE_INTERACT("skipped, page inactive");
+        TRACE_INTERACT_EXIT();
+        return;
+    }
     if (s_bubble_timer) {
         lv_timer_del(s_bubble_timer);
         s_bubble_timer = NULL;
@@ -327,6 +418,11 @@ static void s_float_text_cb(lv_timer_t *t)
 static void s_show_float_text(const char *text)
 {
     TRACE_INTERACT_ENTER();
+    if (!s_pet_active) {
+        TRACE_INTERACT("skipped, page inactive");
+        TRACE_INTERACT_EXIT();
+        return;
+    }
     if (s_float_text_label) {
         lv_obj_del(s_float_text_label);
     }
@@ -344,32 +440,23 @@ static void s_show_float_text(const char *text)
     TRACE_INTERACT_EXIT();
 }
 
-static void s_ring_speed_cb(lv_timer_t *t)
-{
-    (void)t;
-    TRACE_INTERACT_ENTER();
-    s_ring_speed_boost = 0;
-    lv_timer_del(s_ring_speed_timer);
-    s_ring_speed_timer = NULL;
-    TRACE_INTERACT("ring speed restored");
-    TRACE_INTERACT_EXIT();
-}
-
-static void s_start_ring_speedup(void)
-{
-    TRACE_INTERACT_ENTER();
-    s_ring_speed_boost = 1;
-    if (s_ring_speed_timer) {
-        lv_timer_del(s_ring_speed_timer);
-    }
-    s_ring_speed_timer = lv_timer_create(s_ring_speed_cb, 1000, NULL);
-    TRACE_INTERACT_EXIT();
-}
-
 static void s_feed_bubble_cb(lv_timer_t *t)
 {
     TRACE_INTERACT_ENTER();
-    s_show_bubble(FEED_RESPONSES[pet_rng_range(FEED_RESP_COUNT)], 1800);
+    s_feed_bubble_timer = NULL;
+    const char **msgs;
+    int count;
+    if (g_pet.hunger < 30) {
+        msgs = FEED_HUNGRY_MSGS;
+        count = FEED_HUNGRY_COUNT;
+    } else if (g_pet.hunger > 85) {
+        msgs = FEED_FULL_MSGS;
+        count = FEED_FULL_COUNT;
+    } else {
+        msgs = FEED_NORMAL_MSGS;
+        count = FEED_NORMAL_COUNT;
+    }
+    s_show_bubble(msgs[pet_rng_range(count)], 1800);
     lv_timer_del(t);
     TRACE_INTERACT_EXIT();
 }
@@ -377,15 +464,25 @@ static void s_feed_bubble_cb(lv_timer_t *t)
 static void s_play_bubble_cb(lv_timer_t *t)
 {
     TRACE_INTERACT_ENTER();
+    s_play_bubble_timer = NULL;
     s_show_bubble(PLAY_RESPONSES[pet_rng_range(PLAY_RESP_COUNT)], 1800);
     lv_timer_del(t);
     TRACE_INTERACT_EXIT();
+}
+
+static void s_auto_bubble_cb(lv_timer_t *t)
+{
+    (void)t;
+    if (!s_pet_active) return;
+    if (s_bubble_timer) return;
+    s_show_bubble(AUTO_MESSAGES[pet_rng_range(AUTO_MSG_COUNT)], 2500);
 }
 
 static void s_overlay_talk_cb(lv_timer_t *t)
 {
     (void)t;
     TRACE_INTERACT_ENTER();
+    s_defer_timer = NULL;
     s_on_talk(NULL);
     lv_timer_del(t);
     TRACE_INTERACT_EXIT();
@@ -409,8 +506,10 @@ static void s_on_feed(lv_event_t *e)
     s_start_wiggle();
     s_show_float_text("+8");
     // Show speech bubble after a short delay
-    lv_timer_t *bubble_timer = lv_timer_create(s_feed_bubble_cb, 500, NULL);
-    (void)bubble_timer;
+    if (s_feed_bubble_timer) {
+        lv_timer_del(s_feed_bubble_timer);
+    }
+    s_feed_bubble_timer = lv_timer_create(s_feed_bubble_cb, 500, NULL);
     TRACE_INTERACT("hunger=%d", g_pet.hunger);
     TRACE_INTERACT_EXIT();
 }
@@ -439,9 +538,10 @@ static void s_on_play(lv_event_t *e)
     s_update_bars();
     s_start_jump();
     s_show_float_text("+10");
-    s_start_ring_speedup();
-    lv_timer_t *bubble_timer = lv_timer_create(s_play_bubble_cb, 400, NULL);
-    (void)bubble_timer;
+    if (s_play_bubble_timer) {
+        lv_timer_del(s_play_bubble_timer);
+    }
+    s_play_bubble_timer = lv_timer_create(s_play_bubble_cb, 400, NULL);
     TRACE_INTERACT("joy=%d", g_pet.joy);
     TRACE_INTERACT_EXIT();
 }
@@ -492,8 +592,10 @@ static void s_on_overlay_released(lv_event_t *e)
     } else {
         if (elapsed < 600) {
             // Defer talk to avoid re-entrant LVGL issues from event callback
-            lv_timer_t *defer = lv_timer_create(s_overlay_talk_cb, 10, NULL);
-            (void)defer;
+            if (s_defer_timer) {
+                lv_timer_del(s_defer_timer);
+            }
+            s_defer_timer = lv_timer_create(s_overlay_talk_cb, 10, NULL);
         }
     }
     TRACE_INTERACT_EXIT();
@@ -509,6 +611,7 @@ static void s_on_hat_pick(lv_event_t *e)
             g_pet.hat = (PetHat)i;
             pet_save();
             s_render_sprite();
+            s_show_bubble(HAT_RESPONSES[pet_rng_range(HAT_RESP_COUNT)], 1800);
             TRACE_INTERACT("hat=%d", i);
             break;
         }
@@ -556,23 +659,11 @@ static void s_anim_float_cb(lv_timer_t *t)
     }
 }
 
-static void s_ring_pulse_cb(lv_timer_t *t)
-{
-    (void)t;
-    s_ring_phase++;
-    int period = s_ring_speed_boost ? 20 : 60;
-    float phase = (float)(s_ring_phase % period) / (float)period * 6.28318f;
-    float scale = 1.0f + sinf(phase) * 0.04f;
-    lv_obj_set_style_arc_width(s_pet_ring, (int)(1.0f * scale), LV_PART_MAIN);
-    if (s_ring_phase % 60 == 0) {
-        TRACE_INTERACT("ring phase=%lu scale=%.2f boost=%d", s_ring_phase, scale, s_ring_speed_boost);
-    }
-}
-
 // ========== Helper: create circular action button ==========
 static lv_obj_t* s_make_circle_btn(lv_obj_t *parent, const char *icon, const char *text_label,
                                     uint32_t bg_color, uint32_t border_color, uint32_t text_color,
-                                    lv_event_cb_t cb, int x_offset)
+                                    lv_event_cb_t cb, int x_offset,
+                                    const lv_font_t *icon_font)
 {
     lv_obj_t *btn = lv_btn_create(parent);
     lv_obj_set_size(btn, 48, 48);
@@ -589,7 +680,7 @@ static lv_obj_t* s_make_circle_btn(lv_obj_t *parent, const char *icon, const cha
     lv_obj_t *icon_label = lv_label_create(btn);
     lv_label_set_text(icon_label, icon);
     lv_obj_set_style_text_color(icon_label, lv_color_hex(text_color), 0);
-    lv_obj_set_style_text_font(icon_label, &font_cjk_14, 0);
+    lv_obj_set_style_text_font(icon_label, icon_font, 0);
     lv_obj_center(icon_label);
 
     lv_obj_t *txt = lv_label_create(parent);
@@ -634,7 +725,7 @@ void ui_pet_create(lv_obj_t *parent_tile)
 
     // Hunger
     lv_obj_t *hunger_icon = lv_label_create(stats_cont);
-    lv_label_set_text(hunger_icon, "\xe2\x97\x90"); // ◐
+    lv_label_set_text(hunger_icon, "\xef\xa0\x85"); // burger
     lv_obj_set_style_text_color(hunger_icon, lv_color_hex(0x6B6B78), 0);
     lv_obj_set_style_text_font(hunger_icon, &font_cjk_14, 0);
     lv_obj_align(hunger_icon, LV_ALIGN_LEFT_MID, 0, -7);
@@ -656,7 +747,7 @@ void ui_pet_create(lv_obj_t *parent_tile)
 
     // Joy
     lv_obj_t *joy_icon = lv_label_create(stats_cont);
-    lv_label_set_text(joy_icon, "\xe2\x99\xa5"); // ♥
+    lv_label_set_text(joy_icon, "\xef\x80\x84"); // heart
     lv_obj_set_style_text_color(joy_icon, lv_color_hex(0x6B6B78), 0);
     lv_obj_set_style_text_font(joy_icon, &font_cjk_14, 0);
     lv_obj_align(joy_icon, LV_ALIGN_LEFT_MID, 0, 7);
@@ -691,6 +782,7 @@ void ui_pet_create(lv_obj_t *parent_tile)
     lv_obj_add_flag(s_bubble, LV_OBJ_FLAG_HIDDEN);
     lv_obj_clear_flag(s_bubble, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_scrollbar_mode(s_bubble, LV_SCROLLBAR_MODE_OFF);
+    lv_obj_clear_flag(s_bubble, LV_OBJ_FLAG_CLICKABLE);
 
     s_bubble_label = lv_label_create(s_bubble);
     lv_label_set_text(s_bubble_label, "");
@@ -700,22 +792,11 @@ void ui_pet_create(lv_obj_t *parent_tile)
     lv_obj_set_width(s_bubble_label, 192);
     lv_obj_center(s_bubble_label);
 
-    // --- 4. Pet stage ---
-    s_pet_ring = lv_arc_create(parent_tile);
-    lv_obj_set_size(s_pet_ring, 200, 200);
-    lv_arc_set_bg_angles(s_pet_ring, 0, 360);
-    lv_arc_set_angles(s_pet_ring, 0, 360);
-    lv_obj_set_style_arc_color(s_pet_ring, lv_color_hex(0x252530), LV_PART_MAIN);
-    lv_obj_set_style_arc_width(s_pet_ring, 1, LV_PART_MAIN);
-    lv_obj_set_style_arc_color(s_pet_ring, lv_color_hex(0x252530), LV_PART_INDICATOR);
-    lv_obj_set_style_arc_width(s_pet_ring, 1, LV_PART_INDICATOR);
-    lv_obj_remove_style(s_pet_ring, NULL, LV_PART_KNOB);
-    lv_obj_align(s_pet_ring, LV_ALIGN_CENTER, 0, 0);
-
+    // --- 4. Pet sprite ---
     s_label_sprite = lv_label_create(parent_tile);
     lv_label_set_text(s_label_sprite, "");
     lv_obj_set_style_text_color(s_label_sprite, lv_color_hex(COLOR_HEX[g_pet.color]), 0);
-    lv_obj_set_style_text_font(s_label_sprite, &font_mono_16, 0);
+    lv_obj_set_style_text_font(s_label_sprite, &font_mono_20, 0);
     lv_obj_set_style_text_align(s_label_sprite, LV_TEXT_ALIGN_CENTER, 0);
     // NOTE: Do NOT use LONG_DOT for multi-line ASCII art; it breaks layout.
     // Position is controlled by animation timer, not here.
@@ -747,20 +828,23 @@ void ui_pet_create(lv_obj_t *parent_tile)
     lv_obj_align(action_cont, LV_ALIGN_BOTTOM_MID, 0, -28);
 
     // Left - FEED
-    s_btn_feed = s_make_circle_btn(action_cont, "\xe2\x97\x8f", "FEED",
+    s_btn_feed = s_make_circle_btn(action_cont, "\xef\x97\x91", "FEED",
                                     0x13131A, 0x252530, 0xE8E8ED,
-                                    s_on_feed, -52);
+                                    s_on_feed, -52,
+                                    &font_cjk_14);
 
     // Center - TALK
-    s_btn_talk = s_make_circle_btn(action_cont, "\xe2\x98\xba", "TALK",
+    s_btn_talk = s_make_circle_btn(action_cont, "\xef\x89\xba", "TALK",
                                     0x3DD9D0, 0x3DD9D0, 0x3DD9D0,
-                                    s_on_talk, 0);
+                                    s_on_talk, 0,
+                                    &font_cjk_14);
     lv_obj_set_style_bg_opa(s_btn_talk, LV_OPA_20, 0);
 
     // Right - PLAY
-    s_btn_play = s_make_circle_btn(action_cont, "\xe2\x96\xb6", "PLAY",
+    s_btn_play = s_make_circle_btn(action_cont, "\xef\x90\xb2", "PLAY",
                                     0x13131A, 0x252530, 0xE8E8ED,
-                                    s_on_play, 52);
+                                    s_on_play, 52,
+                                    &font_cjk_14);
 
     // --- 7. Hat picker menu (full-screen modal) ---
     s_hat_menu = lv_obj_create(lv_scr_act());
@@ -841,12 +925,11 @@ void ui_pet_create(lv_obj_t *parent_tile)
 
     // --- Initial render ---
     s_anim_frame = 0;
-    s_ring_phase = 0;
     s_render_sprite();
 
     // --- Timers ---
     s_timer_float = lv_timer_create(s_anim_float_cb, 40, NULL);
-    s_timer_ring = lv_timer_create(s_ring_pulse_cb, 50, NULL);
+    s_auto_bubble_timer = lv_timer_create(s_auto_bubble_cb, 45000, NULL);
     TRACE_INTERACT_EXIT();
 }
 
@@ -862,14 +945,86 @@ void ui_pet_update(void)
 
 void ui_pet_pause_anim(void)
 {
+    TRACE_INTERACT_ENTER();
+    s_pet_active = false;
+
+    /* Pause idle animations */
     if (s_timer_float) lv_timer_pause(s_timer_float);
-    if (s_timer_ring) lv_timer_pause(s_timer_ring);
+    if (s_auto_bubble_timer) lv_timer_pause(s_auto_bubble_timer);
+
+    /* Hide bubble and cancel its timer */
+    lv_obj_add_flag(s_bubble, LV_OBJ_FLAG_HIDDEN);
+    if (s_bubble_timer) {
+        lv_timer_del(s_bubble_timer);
+        s_bubble_timer = NULL;
+    }
+
+    /* Cancel deferred talk timer */
+    if (s_defer_timer) {
+        lv_timer_del(s_defer_timer);
+        s_defer_timer = NULL;
+    }
+
+    /* Cancel long-press timer */
+    if (s_long_press_timer) {
+        lv_timer_del(s_long_press_timer);
+        s_long_press_timer = NULL;
+    }
+    s_press_tick = 0;
+    s_long_triggered = 0;
+
+    /* Cancel wiggle and reset transform */
+    if (s_wiggle_timer) {
+        lv_timer_del(s_wiggle_timer);
+        s_wiggle_timer = NULL;
+    }
+    s_wiggle_step = 0;
+    lv_obj_set_style_transform_angle(s_label_sprite, 0, 0);
+
+    /* Cancel jump and reset position */
+    if (s_jump_timer) {
+        lv_timer_del(s_jump_timer);
+        s_jump_timer = NULL;
+    }
+    s_jump_step = 0;
+    lv_obj_align(s_label_sprite, LV_ALIGN_CENTER, 0, 0);
+
+    /* Cancel float text and delete label */
+    if (s_float_text_timer) {
+        lv_timer_del(s_float_text_timer);
+        s_float_text_timer = NULL;
+    }
+    if (s_float_text_label) {
+        lv_obj_del(s_float_text_label);
+        s_float_text_label = NULL;
+    }
+    s_float_text_step = 0;
+
+    /* Cancel delayed feed/play bubble timers */
+    if (s_feed_bubble_timer) {
+        lv_timer_del(s_feed_bubble_timer);
+        s_feed_bubble_timer = NULL;
+    }
+    if (s_play_bubble_timer) {
+        lv_timer_del(s_play_bubble_timer);
+        s_play_bubble_timer = NULL;
+    }
+
+    /* Hide hat menu */
+    s_hide_hat_menu();
+
+    TRACE_INTERACT_EXIT();
 }
 
 void ui_pet_resume_anim(void)
 {
+    s_pet_active = true;
     if (s_timer_float) lv_timer_resume(s_timer_float);
-    if (s_timer_ring) lv_timer_resume(s_timer_ring);
+    if (s_auto_bubble_timer) lv_timer_resume(s_auto_bubble_timer);
+    // Greeting bubble when entering the page
+    if (!s_bubble_timer) {
+        s_show_bubble(ENTER_GREETINGS[pet_rng_range(ENTER_GREET_COUNT)], 2000);
+    }
 }
 
 void ui_pet_delete(void)
@@ -879,9 +1034,9 @@ void ui_pet_delete(void)
         lv_timer_del(s_timer_float);
         s_timer_float = NULL;
     }
-    if (s_timer_ring) {
-        lv_timer_del(s_timer_ring);
-        s_timer_ring = NULL;
+    if (s_auto_bubble_timer) {
+        lv_timer_del(s_auto_bubble_timer);
+        s_auto_bubble_timer = NULL;
     }
     if (s_long_press_timer) {
         lv_timer_del(s_long_press_timer);
@@ -898,10 +1053,6 @@ void ui_pet_delete(void)
     if (s_float_text_timer) {
         lv_timer_del(s_float_text_timer);
         s_float_text_timer = NULL;
-    }
-    if (s_ring_speed_timer) {
-        lv_timer_del(s_ring_speed_timer);
-        s_ring_speed_timer = NULL;
     }
     if (s_bubble_timer) {
         lv_timer_del(s_bubble_timer);

@@ -220,6 +220,9 @@ void setup()
     ui_device_create(tile_device);
 
     TRACE_MAIN("INIT Backlight ON...");
+    /* Force a full LVGL refresh before turning on backlight so the first
+       frame the user sees is the complete pet page, not white/garbage. */
+    lv_timer_handler();
     Set_Backlight(BACKLIGHT_BRIGHTNESS);
 
     TRACE_MAIN("Creating timers...");

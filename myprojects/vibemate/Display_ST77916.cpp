@@ -602,9 +602,8 @@ uint8_t LCD_Backlight = 50;
 // backlight
 void Backlight_Init()
 {
-  ledcAttach(LCD_Backlight_PIN, Frequency, Resolution);   
-  ledcWrite(LCD_Backlight_PIN, Dutyfactor);  
-  Set_Backlight(LCD_Backlight);      //0~100                 
+  ledcAttach(LCD_Backlight_PIN, Frequency, Resolution);
+  ledcWrite(LCD_Backlight_PIN, 0);
 }
 
 void Set_Backlight(uint8_t Light)                     

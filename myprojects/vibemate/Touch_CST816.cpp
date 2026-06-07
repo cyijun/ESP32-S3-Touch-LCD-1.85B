@@ -14,10 +14,16 @@ bool I2C_Read_Touch(uint16_t Driver_addr, uint8_t Reg_addr, uint8_t *Reg_data, u
     Wire.write(Reg_addr);
     if (Wire.endTransmission(true)) {
       printf("The I2C transmission fails. - I2C Read\r\n");
-      xSemaphoreGive(wire_mutex);  
+      xSemaphoreGive(wire_mutex);
       return false;
     }
-    Wire.requestFrom(Driver_addr, Length);
+    uint8_t received = Wire.requestFrom(Driver_addr, Length);
+    if (received != Length) {
+      printf("[DIAG] I2C_Read_Touch requestFrom timeout: expected %lu, got %u\r\n",
+             (unsigned long)Length, received);
+      xSemaphoreGive(wire_mutex);
+      return false;
+    }
     for (int i = 0; i < Length; i++) {
       *Reg_data++ = Wire.read();
     }
@@ -110,17 +116,33 @@ uint8_t Touch_Read_Data(void) {
   /* touched gesture */
   if (buf[0] != 0x00)
     touch_data.gesture = (GESTURE)buf[0];
+  /* Parse before touching global state */
+  uint8_t points = (uint8_t)buf[1];
+  if (points > CST816_LCD_TOUCH_MAX_POINTS)
+      points = CST816_LCD_TOUCH_MAX_POINTS;
+
+  uint16_t x = 0, y = 0;
+  bool coords_invalid = false;
+  if (points > 0) {
+      x = ((buf[2] & 0x0F) << 8) + buf[3];
+      y = ((buf[4] & 0x0F) << 8) + buf[5];
+      if (x > 400 || y > 400) {
+          points = 0;
+          coords_invalid = true;
+      }
+  }
+
   noInterrupts();
-  /* Number of touched points */
-  touch_data.points = (uint8_t)buf[1];
-  if(touch_data.points > CST816_LCD_TOUCH_MAX_POINTS)
-      touch_data.points = CST816_LCD_TOUCH_MAX_POINTS;
-  /* Fill coordinates */
-  if (touch_data.points > 0) {
-      touch_data.x = ((buf[2] & 0x0F) << 8) + buf[3];
-      touch_data.y = ((buf[4] & 0x0F) << 8) + buf[5];
+  touch_data.points = points;
+  if (points > 0) {
+      touch_data.x = x;
+      touch_data.y = y;
   }
   interrupts();
+
+  if (coords_invalid) {
+      printf("[DIAG] Touch_Read_Data invalid coords: x=%u y=%u\r\n", x, y);
+  }
   return true;
 }
 void example_touchpad_read(void){
