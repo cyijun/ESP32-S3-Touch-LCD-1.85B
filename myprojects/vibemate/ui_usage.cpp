@@ -19,10 +19,10 @@ static float s_last_week_pct = 0.0f;
 static float s_last_window_pct = 0.0f;
 static bool s_has_data = false;
 
-static void tile_click_cb(lv_event_t *e) {
+/*static void tile_click_cb(lv_event_t *e) {
     (void)e;
     kimi_api_refresh_now();
-}
+}*/
 
 static void tick_ring_draw_cb(lv_event_t *e) {
     lv_draw_ctx_t *draw_ctx = lv_event_get_draw_ctx(e);
@@ -71,17 +71,17 @@ void ui_usage_create(lv_obj_t *parent_tile) {
     lv_obj_set_style_pad_all(parent_tile, 0, 0);
     lv_obj_set_style_border_width(parent_tile, 0, 0);
 
-    lv_obj_add_event_cb(parent_tile, tile_click_cb, LV_EVENT_CLICKED, NULL);
+    // lv_obj_add_event_cb(parent_tile, tile_click_cb, LV_EVENT_CLICKED, NULL);
 
     // --- Tick ring (decorative, behind arcs) ---
-    tick_ring = lv_obj_create(parent_tile);
-    lv_obj_set_size(tick_ring, 360, 360);
-    lv_obj_set_style_bg_opa(tick_ring, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(tick_ring, 0, 0);
-    lv_obj_set_style_pad_all(tick_ring, 0, 0);
-    lv_obj_clear_flag(tick_ring, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_add_event_cb(tick_ring, tick_ring_draw_cb, LV_EVENT_DRAW_MAIN, NULL);
-    lv_obj_align(tick_ring, LV_ALIGN_CENTER, 0, 0);
+    // tick_ring = lv_obj_create(parent_tile);
+    // lv_obj_set_size(tick_ring, 360, 360);
+    // lv_obj_set_style_bg_opa(tick_ring, LV_OPA_TRANSP, 0);
+    // lv_obj_set_style_border_width(tick_ring, 0, 0);
+    // lv_obj_set_style_pad_all(tick_ring, 0, 0);
+    // lv_obj_clear_flag(tick_ring, LV_OBJ_FLAG_CLICKABLE);
+    // lv_obj_add_event_cb(tick_ring, tick_ring_draw_cb, LV_EVENT_DRAW_MAIN, NULL);
+    // lv_obj_align(tick_ring, LV_ALIGN_CENTER, 0, 0);
 
     // --- Status dot (top-right) ---
     status_dot = lv_obj_create(parent_tile);

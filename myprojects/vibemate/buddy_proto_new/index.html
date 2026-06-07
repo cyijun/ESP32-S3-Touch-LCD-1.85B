@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Buddy — 360×360 Circular LVGL GUI</title>
+  <style>
+    :root {
+      --bg: #0A0A0F;
+      --surface: #13131A;
+      --fg: #E8E8ED;
+      --muted: #6B6B78;
+      --border: #252530;
+      --accent: #3DD9D0;
+      --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+      --font-mono: 'SF Mono', ui-monospace, Menlo, monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      background: #050508;
+      font-family: var(--font);
+      color: var(--fg);
+      padding: 40px 24px;
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; }
+    h1 {
+      font-size: 22px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .subtitle {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 32px;
+    }
+    .screens {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+      gap: 32px;
+    }
+    .screen-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+    .screen-card h2 {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .screen-card .frame {
+      width: 360px;
+      height: 360px;
+      border-radius: 50%;
+      overflow: hidden;
+      box-shadow: 0 0 0 2px var(--border), 0 20px 80px rgba(0,0,0,0.5);
+    }
+    .screen-card .frame iframe {
+      width: 360px;
+      height: 360px;
+      border: 0;
+    }
+    .screen-card .meta {
+      font-size: 11px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+    }
+
+    .lvgl-note {
+      margin-top: 40px;
+      padding: 20px 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+    }
+    .lvgl-note h3 {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--accent);
+    }
+    .lvgl-note p, .lvgl-note li {
+      font-size: 12px;
+      line-height: 1.7;
+      color: var(--muted);
+    }
+    .lvgl-note ul { margin-left: 18px; }
+    .lvgl-note code {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--fg);
+      background: rgba(61,217,208,0.08);
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+    .lvgl-note table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      font-size: 11px;
+    }
+    .lvgl-note th, .lvgl-note td {
+      text-align: left;
+      padding: 6px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .lvgl-note th {
+      color: var(--fg);
+      font-weight: 500;
+    }
+    .lvgl-note td { color: var(--muted); }
+    .lvgl-note td code { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Buddy — 360×360 圆形 LVGL GUI</h1>
+    <p class="subtitle">嵌入式交互界面设计参考 · 3 屏 · 深色极简 · LVGL 组件语义</p>
+
+    <div class="screens">
+      <div class="screen-card">
+        <h2>交互主屏</h2>
+        <div class="frame"><iframe src="screen-interact.html" loading="lazy"></iframe></div>
+        <div class="meta">screen-interact.html</div>
+      </div>
+      <div class="screen-card">
+        <h2>属性面板</h2>
+        <div class="frame"><iframe src="screen-stats.html" loading="lazy"></iframe></div>
+        <div class="meta">screen-stats.html</div>
+      </div>
+      <div class="screen-card">
+        <h2>伙伴选择</h2>
+        <div class="frame"><iframe src="screen-select.html" loading="lazy"></iframe></div>
+        <div class="meta">screen-select.html</div>
+      </div>
+    </div>
+
+    <div class="lvgl-note">
+      <h3>LVGL 组件映射</h3>
+      <table>
+        <tr><th>HTML/CSS 元素</th><th>LVGL Widget</th><th>实现建议</th></tr>
+        <tr><td><code>.lv-display</code></td><td><code>lv_obj_t *screen</code></td><td>360×360 主屏对象，圆形裁剪由显示驱动处理</td></tr>
+        <tr><td><code>.lv-label</code></td><td><code>lv_label</code></td><td>所有文本标签，使用内置字体 10–16px</td></tr>
+        <tr><td><code>.lv-btn</code></td><td><code>lv_btn + lv_label</code></td><td>圆形按钮：半径 24px，边框 1px</td></tr>
+        <tr><td><code>.lv-arc-track / .arc-wrap</code></td><td><code>lv_arc</code></td><td>属性环：背景弧 + 前景弧，半径 13px</td></tr>
+        <tr><td><code>.stat-bar-track</code></td><td><code>lv_bar</code></td><td>线性进度条：高度 3px，圆角</td></tr>
+        <tr><td><code>.pet-sprite</code></td><td><code>lv_img</code></td><td>ASCII 精灵需预渲染为 C 数组位图 (LV_IMG_CF_ALPHA_8BIT)</td></tr>
+        <tr><td><code>.speech-bubble</code></td><td><code>lv_obj + lv_label</code></td><td>圆角矩形容器 + 文本，底部三角用 <code>lv_line</code></td></tr>
+        <tr><td><code>.pet-ring</code></td><td><code>lv_arc</code> 或 <code>lv_line</code></td><td>装饰性细圆环，可选动画</td></tr>
+      </table>
+
+      <h3 style="margin-top:20px">设计令牌</h3>
+      <ul>
+        <li>画布：360×360 px，圆形边界（显示驱动负责裁剪四角）</li>
+        <li>安全边距：16px（文本/按钮不贴边，避免圆角裁切）</li>
+        <li>主色：<code>--accent: #3DD9D0</code>（青色，用于高亮、进度、交互反馈）</li>
+        <li>背景：<code>#0A0A0F</code>（深色，OLED 省电，对比度高）</li>
+        <li>字体：系统无衬线 + 等宽字体（LVGL 中映射为内置字体）</li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>

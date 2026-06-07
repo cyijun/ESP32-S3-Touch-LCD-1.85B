@@ -43,8 +43,10 @@ Location: `myprojects/vibemate/`
 
 ```bash
 # Compile
-arduino-cli compile --fqbn "esp32:esp32:esp32s3:FlashSize=16M,PartitionScheme=app3M_fat9M_16MB,PSRAM=opi" .
+arduino-cli compile --fqbn "esp32:esp32:esp32s3:FlashSize=16M,PartitionScheme=app3M_fat9M_16MB,PSRAM=opi,CDCOnBoot=cdc" .
 
 # Upload
-arduino-cli upload --fqbn "esp32:esp32:esp32s3:FlashSize=16M,PartitionScheme=app3M_fat9M_16MB,PSRAM=opi" -p /dev/cu.usbmodem101 .
+arduino-cli upload --fqbn "esp32:esp32:esp32s3:FlashSize=16M,PartitionScheme=app3M_fat9M_16MB,PSRAM=opi,CDCOnBoot=cdc" -p /dev/cu.usbmodem101 .
 ```
+
+**`CDCOnBoot=cdc` 必须加上。** ESP32 Arduino core 3.x 中 `Serial` 默认映射到 UART0，而此板子的 USB 口直连的是 ESP32-S3 内置 USB-Serial/JTAG 外设。缺少 `CDCOnBoot=cdc` 会导致 `Serial.print` / `Serial.printf` 没有任何输出（包括 panic 日志和前端埋点）。
