@@ -87,5 +87,10 @@ void Lvgl_Init(void)
 }
 void Lvgl_Loop(void)
 {
+  uint32_t t0 = lv_tick_get();
   lv_timer_handler(); /* let the GUI do its work */
+  uint32_t dt = lv_tick_elaps(t0);
+  if (dt > 50) {
+    printf("[DIAG] lv_timer_handler took %u ms\r\n", dt);
+  }
 }

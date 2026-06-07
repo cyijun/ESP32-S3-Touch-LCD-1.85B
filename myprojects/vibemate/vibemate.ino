@@ -16,6 +16,7 @@
 #include <lvgl.h>
 #include <Wire.h>
 #include <BQ27220.h>
+#include <esp_heap_caps.h>
 
 static lv_obj_t *tileview;
 static lv_obj_t *tile_pet_select;
@@ -228,6 +229,9 @@ void loop()
     if (now - last_heap_print >= 5000) {
         last_heap_print = now;
         TRACE_MAIN_HEAP();
+        size_t largest_int = heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT);
+        size_t largest_psram = heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM);
+        Serial.printf("[MAIN] LARGEST free int=%u psram=%u\n", largest_int, largest_psram);
     }
     vTaskDelay(pdMS_TO_TICKS(10));
 }

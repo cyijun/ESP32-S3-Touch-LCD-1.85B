@@ -9,7 +9,7 @@ extern SemaphoreHandle_t wire_mutex;
 bool I2C_Read_Touch(uint16_t Driver_addr, uint8_t Reg_addr, uint8_t *Reg_data, uint32_t Length)
 {
   bool result = false;
-  if (xSemaphoreTake(wire_mutex, portMAX_DELAY)) {
+  if (xSemaphoreTake(wire_mutex, pdMS_TO_TICKS(50))) {
     Wire.beginTransmission(Driver_addr);
     Wire.write(Reg_addr);
     if (Wire.endTransmission(true)) {
@@ -21,8 +21,10 @@ bool I2C_Read_Touch(uint16_t Driver_addr, uint8_t Reg_addr, uint8_t *Reg_data, u
     for (int i = 0; i < Length; i++) {
       *Reg_data++ = Wire.read();
     }
-    xSemaphoreGive(wire_mutex); 
+    xSemaphoreGive(wire_mutex);
     result = true;
+  } else {
+    printf("[DIAG] I2C_Read_Touch mutex timeout\r\n");
   }
   return result;
 }
@@ -30,7 +32,7 @@ bool I2C_Read_Touch(uint16_t Driver_addr, uint8_t Reg_addr, uint8_t *Reg_data, u
 bool I2C_Write_Touch(uint8_t Driver_addr, uint8_t Reg_addr, const uint8_t *Reg_data, uint32_t Length)
 {
   bool result = false;
-  if (xSemaphoreTake(wire_mutex, portMAX_DELAY)) {
+  if (xSemaphoreTake(wire_mutex, pdMS_TO_TICKS(50))) {
     Wire.beginTransmission(Driver_addr);
     Wire.write(Reg_addr);
     for (int i = 0; i < Length; i++) {
@@ -41,8 +43,10 @@ bool I2C_Write_Touch(uint8_t Driver_addr, uint8_t Reg_addr, const uint8_t *Reg_d
       xSemaphoreGive(wire_mutex); 
       return false;
     }
-    xSemaphoreGive(wire_mutex);  
+    xSemaphoreGive(wire_mutex);
     result = true;
+  } else {
+    printf("[DIAG] I2C_Write_Touch mutex timeout\r\n");
   }
   return result;
 }
