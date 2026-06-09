@@ -1,6 +1,8 @@
 #include "ui_pet.h"
 #include "pet_sprites.h"
-#include "pet_storage.h"
+#include "pet_manager.h"
+#include "ui_anim.h"
+#include "ui_helpers.h"
 #include <Esp.h>
 #include <stdio.h>
 #include <string.h>
@@ -282,10 +284,9 @@ static void s_render_sprite(void)
 // ========== Bubble ==========
 static void s_hide_bubble_cb(lv_timer_t *t)
 {
+    (void)t;
     TRACE_INTERACT_ENTER();
     lv_obj_add_flag(s_bubble, LV_OBJ_FLAG_HIDDEN);
-    s_bubble_timer = NULL;
-    lv_timer_del(t);
     TRACE_INTERACT_EXIT();
 }
 
@@ -297,13 +298,10 @@ static void s_show_bubble(const char *text, uint32_t duration_ms)
         TRACE_INTERACT_EXIT();
         return;
     }
-    if (s_bubble_timer) {
-        lv_timer_del(s_bubble_timer);
-        s_bubble_timer = NULL;
-    }
+    ui_anim_stop(&s_bubble_timer);
     lv_label_set_text(s_bubble_label, text);
     lv_obj_clear_flag(s_bubble, LV_OBJ_FLAG_HIDDEN);
-    s_bubble_timer = lv_timer_create(s_hide_bubble_cb, duration_ms, NULL);
+    ui_anim_start_once(&s_bubble_timer, s_hide_bubble_cb, duration_ms);
     if (!s_bubble_timer) {
         TRACE_INTERACT("ERROR: lv_timer_create failed for bubble");
     }
@@ -336,8 +334,6 @@ static void s_wiggle_cb(lv_timer_t *t)
     s_wiggle_step++;
     if (s_wiggle_step >= sizeof(angles) / sizeof(angles[0])) {
         lv_obj_set_style_transform_angle(s_label_sprite, 0, 0);
-        lv_timer_del(s_wiggle_timer);
-        s_wiggle_timer = NULL;
         s_wiggle_step = 0;
         TRACE_INTERACT("wiggle done");
         TRACE_INTERACT_EXIT();
@@ -353,11 +349,9 @@ static void s_wiggle_cb(lv_timer_t *t)
 static void s_start_wiggle(void)
 {
     TRACE_INTERACT_ENTER();
-    if (s_wiggle_timer) {
-        lv_timer_del(s_wiggle_timer);
-    }
+    ui_anim_stop(&s_wiggle_timer);
     s_wiggle_step = 0;
-    s_wiggle_timer = lv_timer_create(s_wiggle_cb, 100, NULL);
+    ui_anim_start_once(&s_wiggle_timer, s_wiggle_cb, 100);
     TRACE_INTERACT_EXIT();
 }
 
@@ -369,8 +363,6 @@ static void s_jump_cb(lv_timer_t *t)
     s_jump_step++;
     if (s_jump_step >= sizeof(offsets) / sizeof(offsets[0])) {
         lv_obj_align(s_label_sprite, LV_ALIGN_CENTER, 0, 0);
-        lv_timer_del(s_jump_timer);
-        s_jump_timer = NULL;
         s_jump_step = 0;
         TRACE_INTERACT("jump done");
         TRACE_INTERACT_EXIT();
@@ -384,11 +376,9 @@ static void s_jump_cb(lv_timer_t *t)
 static void s_start_jump(void)
 {
     TRACE_INTERACT_ENTER();
-    if (s_jump_timer) {
-        lv_timer_del(s_jump_timer);
-    }
+    ui_anim_stop(&s_jump_timer);
     s_jump_step = 0;
-    s_jump_timer = lv_timer_create(s_jump_cb, 90, NULL);
+    ui_anim_start_once(&s_jump_timer, s_jump_cb, 90);
     TRACE_INTERACT_EXIT();
 }
 
@@ -401,8 +391,6 @@ static void s_float_text_cb(lv_timer_t *t)
             lv_obj_del(s_float_text_label);
             s_float_text_label = NULL;
         }
-        lv_timer_del(s_float_text_timer);
-        s_float_text_timer = NULL;
         s_float_text_step = 0;
         TRACE_INTERACT("float_text done");
         return;
@@ -426,24 +414,22 @@ static void s_show_float_text(const char *text)
     if (s_float_text_label) {
         lv_obj_del(s_float_text_label);
     }
-    if (s_float_text_timer) {
-        lv_timer_del(s_float_text_timer);
-    }
+    ui_anim_stop(&s_float_text_timer);
     s_float_text_label = lv_label_create(lv_obj_get_parent(s_label_sprite));
     lv_label_set_text(s_float_text_label, text);
     lv_obj_set_style_text_color(s_float_text_label, lv_color_hex(0x3DD9D0), 0);
     lv_obj_set_style_text_font(s_float_text_label, &lv_font_montserrat_12, 0);
     lv_obj_align(s_float_text_label, LV_ALIGN_CENTER, 0, -6);
     s_float_text_step = 0;
-    s_float_text_timer = lv_timer_create(s_float_text_cb, 100, NULL);
+    ui_anim_start_once(&s_float_text_timer, s_float_text_cb, 100);
     TRACE_INTERACT("text='%s'", text);
     TRACE_INTERACT_EXIT();
 }
 
 static void s_feed_bubble_cb(lv_timer_t *t)
 {
+    (void)t;
     TRACE_INTERACT_ENTER();
-    s_feed_bubble_timer = NULL;
     const char **msgs;
     int count;
     if (g_pet.hunger < 30) {
@@ -457,16 +443,14 @@ static void s_feed_bubble_cb(lv_timer_t *t)
         count = FEED_NORMAL_COUNT;
     }
     s_show_bubble(msgs[pet_rng_range(count)], 1800);
-    lv_timer_del(t);
     TRACE_INTERACT_EXIT();
 }
 
 static void s_play_bubble_cb(lv_timer_t *t)
 {
+    (void)t;
     TRACE_INTERACT_ENTER();
-    s_play_bubble_timer = NULL;
     s_show_bubble(PLAY_RESPONSES[pet_rng_range(PLAY_RESP_COUNT)], 1800);
-    lv_timer_del(t);
     TRACE_INTERACT_EXIT();
 }
 
@@ -482,9 +466,7 @@ static void s_overlay_talk_cb(lv_timer_t *t)
 {
     (void)t;
     TRACE_INTERACT_ENTER();
-    s_defer_timer = NULL;
     s_on_talk(NULL);
-    lv_timer_del(t);
     TRACE_INTERACT_EXIT();
 }
 
@@ -499,17 +481,14 @@ static void s_on_feed(lv_event_t *e)
         TRACE_INTERACT_EXIT();
         return;
     }
-    g_pet.hunger += 8;
-    if (g_pet.hunger > 100) g_pet.hunger = 100;
-    pet_save();
+    pet_feed(8);
     s_update_bars();
     s_start_wiggle();
     s_show_float_text("+8");
-    // Show speech bubble after a short delay
     if (s_feed_bubble_timer) {
-        lv_timer_del(s_feed_bubble_timer);
+        ui_anim_stop(&s_feed_bubble_timer);
     }
-    s_feed_bubble_timer = lv_timer_create(s_feed_bubble_cb, 500, NULL);
+    ui_anim_start_once(&s_feed_bubble_timer, s_feed_bubble_cb, 500);
     TRACE_INTERACT("hunger=%d", g_pet.hunger);
     TRACE_INTERACT_EXIT();
 }
@@ -532,16 +511,14 @@ static void s_on_play(lv_event_t *e)
         TRACE_INTERACT_EXIT();
         return;
     }
-    g_pet.joy += 10;
-    if (g_pet.joy > 100) g_pet.joy = 100;
-    pet_save();
+    pet_play(10);
     s_update_bars();
     s_start_jump();
     s_show_float_text("+10");
     if (s_play_bubble_timer) {
-        lv_timer_del(s_play_bubble_timer);
+        ui_anim_stop(&s_play_bubble_timer);
     }
-    s_play_bubble_timer = lv_timer_create(s_play_bubble_cb, 400, NULL);
+    ui_anim_start_once(&s_play_bubble_timer, s_play_bubble_cb, 400);
     TRACE_INTERACT("joy=%d", g_pet.joy);
     TRACE_INTERACT_EXIT();
 }
@@ -552,10 +529,8 @@ static void s_long_press_cb(lv_timer_t *t)
     (void)t;
     TRACE_INTERACT_ENTER();
     s_long_triggered = 1;
-    // Timer has repeat_count==1 and will be auto-deleted by LVGL after
-    // this callback returns. Clear our pointer so release handler does
-    // NOT try to lv_timer_del() an already-freed timer (that would
-    // corrupt LVGL's timer linked-list and cause freezes).
+    // ui_anim_start_once wrapper auto-deletes the timer after this callback.
+    // Clear our pointer so the release handler knows the timer is already done.
     s_long_press_timer = NULL;
     TRACE_INTERACT_EXIT();
 }
@@ -566,12 +541,8 @@ static void s_on_overlay_pressed(lv_event_t *e)
     TRACE_INTERACT_ENTER();
     s_press_tick = lv_tick_get();
     s_long_triggered = 0;
-    if (s_long_press_timer) {
-        lv_timer_del(s_long_press_timer);
-        s_long_press_timer = NULL;
-    }
-    s_long_press_timer = lv_timer_create(s_long_press_cb, 600, NULL);
-    s_long_press_timer->repeat_count = 1;
+    ui_anim_stop(&s_long_press_timer);
+    ui_anim_start_once(&s_long_press_timer, s_long_press_cb, 600);
     TRACE_INTERACT_EXIT();
 }
 
@@ -581,21 +552,13 @@ static void s_on_overlay_released(lv_event_t *e)
     TRACE_INTERACT_ENTER();
     uint32_t elapsed = lv_tick_elaps(s_press_tick);
     TRACE_INTERACT("elapsed=%lu triggered=%d", elapsed, s_long_triggered);
-    if (s_long_press_timer) {
-        lv_timer_del(s_long_press_timer);
-        s_long_press_timer = NULL;
-    }
+    ui_anim_stop(&s_long_press_timer);
     if (s_long_triggered) {
-        // Long press confirmed on release — show menu now so buttons
-        // receive a full clean PRESSED+RELEASED cycle on next tap.
         s_show_hat_menu();
     } else {
         if (elapsed < 600) {
-            // Defer talk to avoid re-entrant LVGL issues from event callback
-            if (s_defer_timer) {
-                lv_timer_del(s_defer_timer);
-            }
-            s_defer_timer = lv_timer_create(s_overlay_talk_cb, 10, NULL);
+            ui_anim_stop(&s_defer_timer);
+            ui_anim_start_once(&s_defer_timer, s_overlay_talk_cb, 10);
         }
     }
     TRACE_INTERACT_EXIT();
@@ -608,8 +571,7 @@ static void s_on_hat_pick(lv_event_t *e)
     lv_obj_t *btn = lv_event_get_current_target(e);
     for (int i = 0; i < HAT_COUNT; i++) {
         if (s_hat_buttons[i] == btn) {
-            g_pet.hat = (PetHat)i;
-            pet_save();
+            pet_set_hat((PetHat)i);
             s_render_sprite();
             s_show_bubble(HAT_RESPONSES[pet_rng_range(HAT_RESP_COUNT)], 1800);
             TRACE_INTERACT("hat=%d", i);
@@ -928,8 +890,18 @@ void ui_pet_create(lv_obj_t *parent_tile)
     s_render_sprite();
 
     // --- Timers ---
-    s_timer_float = lv_timer_create(s_anim_float_cb, 40, NULL);
-    s_auto_bubble_timer = lv_timer_create(s_auto_bubble_cb, 45000, NULL);
+    ui_anim_register(&s_timer_float);
+    ui_anim_register(&s_auto_bubble_timer);
+    ui_anim_register(&s_bubble_timer);
+    ui_anim_register(&s_wiggle_timer);
+    ui_anim_register(&s_jump_timer);
+    ui_anim_register(&s_float_text_timer);
+    ui_anim_register(&s_feed_bubble_timer);
+    ui_anim_register(&s_play_bubble_timer);
+    ui_anim_register(&s_long_press_timer);
+    ui_anim_register(&s_defer_timer);
+    ui_anim_start_loop(&s_timer_float, s_anim_float_cb, 40);
+    ui_anim_start_loop(&s_auto_bubble_timer, s_auto_bubble_cb, 45000);
     TRACE_INTERACT_EXIT();
 }
 
@@ -948,67 +920,31 @@ void ui_pet_pause_anim(void)
     TRACE_INTERACT_ENTER();
     s_pet_active = false;
 
-    /* Pause idle animations */
-    if (s_timer_float) lv_timer_pause(s_timer_float);
-    if (s_auto_bubble_timer) lv_timer_pause(s_auto_bubble_timer);
+    ui_anim_pause_all();
 
-    /* Hide bubble and cancel its timer */
+    /* Hide bubble */
     lv_obj_add_flag(s_bubble, LV_OBJ_FLAG_HIDDEN);
-    if (s_bubble_timer) {
-        lv_timer_del(s_bubble_timer);
-        s_bubble_timer = NULL;
-    }
 
-    /* Cancel deferred talk timer */
-    if (s_defer_timer) {
-        lv_timer_del(s_defer_timer);
-        s_defer_timer = NULL;
-    }
-
-    /* Cancel long-press timer */
-    if (s_long_press_timer) {
-        lv_timer_del(s_long_press_timer);
-        s_long_press_timer = NULL;
-    }
+    /* Stop all one-shot effect timers */
+    ui_anim_stop(&s_bubble_timer);
+    ui_anim_stop(&s_defer_timer);
+    ui_anim_stop(&s_long_press_timer);
     s_press_tick = 0;
     s_long_triggered = 0;
-
-    /* Cancel wiggle and reset transform */
-    if (s_wiggle_timer) {
-        lv_timer_del(s_wiggle_timer);
-        s_wiggle_timer = NULL;
-    }
+    ui_anim_stop(&s_wiggle_timer);
     s_wiggle_step = 0;
     lv_obj_set_style_transform_angle(s_label_sprite, 0, 0);
-
-    /* Cancel jump and reset position */
-    if (s_jump_timer) {
-        lv_timer_del(s_jump_timer);
-        s_jump_timer = NULL;
-    }
+    ui_anim_stop(&s_jump_timer);
     s_jump_step = 0;
     lv_obj_align(s_label_sprite, LV_ALIGN_CENTER, 0, 0);
-
-    /* Cancel float text and delete label */
-    if (s_float_text_timer) {
-        lv_timer_del(s_float_text_timer);
-        s_float_text_timer = NULL;
-    }
+    ui_anim_stop(&s_float_text_timer);
     if (s_float_text_label) {
         lv_obj_del(s_float_text_label);
         s_float_text_label = NULL;
     }
     s_float_text_step = 0;
-
-    /* Cancel delayed feed/play bubble timers */
-    if (s_feed_bubble_timer) {
-        lv_timer_del(s_feed_bubble_timer);
-        s_feed_bubble_timer = NULL;
-    }
-    if (s_play_bubble_timer) {
-        lv_timer_del(s_play_bubble_timer);
-        s_play_bubble_timer = NULL;
-    }
+    ui_anim_stop(&s_feed_bubble_timer);
+    ui_anim_stop(&s_play_bubble_timer);
 
     /* Hide hat menu */
     s_hide_hat_menu();
@@ -1019,8 +955,7 @@ void ui_pet_pause_anim(void)
 void ui_pet_resume_anim(void)
 {
     s_pet_active = true;
-    if (s_timer_float) lv_timer_resume(s_timer_float);
-    if (s_auto_bubble_timer) lv_timer_resume(s_auto_bubble_timer);
+    ui_anim_resume_all();
     // Greeting bubble when entering the page
     if (!s_bubble_timer) {
         s_show_bubble(ENTER_GREETINGS[pet_rng_range(ENTER_GREET_COUNT)], 2000);
@@ -1030,33 +965,6 @@ void ui_pet_resume_anim(void)
 void ui_pet_delete(void)
 {
     TRACE_INTERACT_ENTER();
-    if (s_timer_float) {
-        lv_timer_del(s_timer_float);
-        s_timer_float = NULL;
-    }
-    if (s_auto_bubble_timer) {
-        lv_timer_del(s_auto_bubble_timer);
-        s_auto_bubble_timer = NULL;
-    }
-    if (s_long_press_timer) {
-        lv_timer_del(s_long_press_timer);
-        s_long_press_timer = NULL;
-    }
-    if (s_wiggle_timer) {
-        lv_timer_del(s_wiggle_timer);
-        s_wiggle_timer = NULL;
-    }
-    if (s_jump_timer) {
-        lv_timer_del(s_jump_timer);
-        s_jump_timer = NULL;
-    }
-    if (s_float_text_timer) {
-        lv_timer_del(s_float_text_timer);
-        s_float_text_timer = NULL;
-    }
-    if (s_bubble_timer) {
-        lv_timer_del(s_bubble_timer);
-        s_bubble_timer = NULL;
-    }
+    ui_anim_stop_all();
     TRACE_INTERACT_EXIT();
 }

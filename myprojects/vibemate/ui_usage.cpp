@@ -1,5 +1,6 @@
 #include "ui_usage.h"
 #include "kimi_api.h"
+#include "ui_helpers.h"
 
 static lv_obj_t *arc_week;
 static lv_obj_t *arc_window;
@@ -67,9 +68,7 @@ static void tick_ring_draw_cb(lv_event_t *e) {
 }
 
 void ui_usage_create(lv_obj_t *parent_tile) {
-    lv_obj_set_style_bg_color(parent_tile, lv_color_hex(0x0a0e17), 0);
-    lv_obj_set_style_pad_all(parent_tile, 0, 0);
-    lv_obj_set_style_border_width(parent_tile, 0, 0);
+    ui_style_tile_alt(parent_tile);
 
     // lv_obj_add_event_cb(parent_tile, tile_click_cb, LV_EVENT_CLICKED, NULL);
 

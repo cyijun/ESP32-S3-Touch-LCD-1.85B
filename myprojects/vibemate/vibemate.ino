@@ -10,12 +10,12 @@
 #include "ui_pet_detail.h"
 #include "ui_pet_select.h"
 #include "pet_sprites.h"
-#include "pet_storage.h"
 #include "rtc_bsp.h"
+#include "battery_manager.h"
+#include "pet_manager.h"
 #include "debug_trace.h"
 #include <lvgl.h>
 #include <Wire.h>
-#include <BQ27220.h>
 #include <esp_heap_caps.h>
 
 static lv_obj_t *tileview;
@@ -30,7 +30,6 @@ static lv_timer_t *ui_timer = NULL;
 static lv_timer_t *decay_timer = NULL;
 
 SemaphoreHandle_t wire_mutex;
-BQ27220 g_bq27220;
 
 static void api_timer_cb(lv_timer_t *timer)
 {
@@ -93,13 +92,8 @@ static void ui_timer_cb(lv_timer_t *timer)
 
 static void decay_timer_cb(lv_timer_t *timer) {
     (void)timer;
-    bool changed = false;
-    if (g_pet.hunger > 0) { g_pet.hunger--; changed = true; }
-    if (g_pet.joy > 0) { g_pet.joy--; changed = true; }
-    if (changed) {
+    if (pet_decay()) {
         TRACE_MAIN("decay hunger=%d joy=%d", g_pet.hunger, g_pet.joy);
-        pet_save();
-        ui_pet_update();
     }
 }
 
@@ -139,11 +133,11 @@ void setup()
     TRACE_MAIN("INIT LVGL...");
     Lvgl_Init();
 
-    TRACE_MAIN("INIT BQ27220...");
-    if (!g_bq27220.begin(Wire, 0x55, I2C_SDA_PIN, I2C_SCL_PIN, 400000)) {
-        TRACE_MAIN("BQ27220 not found");
+    TRACE_MAIN("INIT Battery...");
+    if (!battery_init()) {
+        TRACE_MAIN("Battery manager init failed");
     } else {
-        TRACE_MAIN("BQ27220 ready");
+        TRACE_MAIN("Battery manager ready");
     }
 
     TRACE_MAIN("INIT RTC...");
@@ -201,13 +195,7 @@ void setup()
     lv_obj_set_tile(tileview, tile_pet, LV_ANIM_OFF);
     lv_obj_add_event_cb(tileview, tileview_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
 
-    if (!pet_load()) {
-        TRACE_MAIN("No saved pet, generating...");
-        pet_generate();
-        pet_save();
-    } else {
-        TRACE_MAIN("Pet loaded from NVS");
-    }
+    pet_manager_init();
     TRACE_MAIN("Creating ui_pet_select...");
     ui_pet_select_create(tile_pet_select);
     TRACE_MAIN("Creating ui_pet_detail...");

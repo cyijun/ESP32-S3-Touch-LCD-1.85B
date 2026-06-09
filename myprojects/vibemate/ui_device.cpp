@@ -1,10 +1,7 @@
 #include "ui_device.h"
 #include "network_manager.h"
 #include "rtc_bsp.h"
-#include <BQ27220.h>
-
-extern BQ27220 g_bq27220;
-extern SemaphoreHandle_t wire_mutex;
+#include "battery_manager.h"
 
 static lv_obj_t *label_bat_soc;
 static lv_obj_t *label_bat_detail;
@@ -82,23 +79,11 @@ void ui_device_create(lv_obj_t *parent_tile) {
 void ui_device_update(void) {
     char buf[64];
 
-    // Read BQ27220 battery data
-    int soc = 0;
-    int mv = 0;
-    int ma = 0;
-    float tC = 0.0f;
-
-    if (wire_mutex != NULL && xSemaphoreTake(wire_mutex, pdMS_TO_TICKS(20))) {
-        soc = g_bq27220.readStateOfChargePercent();
-        mv = g_bq27220.readVoltageMillivolts();
-        ma = g_bq27220.readCurrentMilliamps();
-        tC = g_bq27220.readTemperatureCelsius();
-        xSemaphoreGive(wire_mutex);
-
-        lv_bar_set_value(bar_bat, soc, LV_ANIM_ON);
-
+    BatteryData bat = battery_read();
+    if (bat.valid) {
+        lv_bar_set_value(bar_bat, bat.soc, LV_ANIM_ON);
         lv_snprintf(buf, sizeof(buf), "SOC: %d%% | %d mV | %d mA | %.1fC",
-                    soc, mv, ma, tC);
+                    bat.soc, bat.voltage_mv, bat.current_ma, bat.temp_c);
         lv_label_set_text(label_bat_detail, buf);
     }
 

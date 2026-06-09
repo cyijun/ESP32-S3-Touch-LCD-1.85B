@@ -1,60 +1,20 @@
 #include "Touch_CST816.h"
+#include "I2C_Driver.h"
 
 struct CST816_Touch touch_data = {0};
 uint8_t Touch_interrupts=0;
-extern SemaphoreHandle_t wire_mutex;
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// I2C
+// I2C — delegated to I2C_Driver (which already protects the bus with wire_mutex)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 bool I2C_Read_Touch(uint16_t Driver_addr, uint8_t Reg_addr, uint8_t *Reg_data, uint32_t Length)
 {
-  bool result = false;
-  if (xSemaphoreTake(wire_mutex, pdMS_TO_TICKS(50))) {
-    Wire.beginTransmission(Driver_addr);
-    Wire.write(Reg_addr);
-    if (Wire.endTransmission(true)) {
-      printf("The I2C transmission fails. - I2C Read\r\n");
-      xSemaphoreGive(wire_mutex);
-      return false;
-    }
-    uint8_t received = Wire.requestFrom(Driver_addr, Length);
-    if (received != Length) {
-      printf("[DIAG] I2C_Read_Touch requestFrom timeout: expected %lu, got %u\r\n",
-             (unsigned long)Length, received);
-      xSemaphoreGive(wire_mutex);
-      return false;
-    }
-    for (int i = 0; i < Length; i++) {
-      *Reg_data++ = Wire.read();
-    }
-    xSemaphoreGive(wire_mutex);
-    result = true;
-  } else {
-    printf("[DIAG] I2C_Read_Touch mutex timeout\r\n");
-  }
-  return result;
+  return I2C_Read((uint8_t)Driver_addr, Reg_addr, Reg_data, Length);
 }
 
 bool I2C_Write_Touch(uint8_t Driver_addr, uint8_t Reg_addr, const uint8_t *Reg_data, uint32_t Length)
 {
-  bool result = false;
-  if (xSemaphoreTake(wire_mutex, pdMS_TO_TICKS(50))) {
-    Wire.beginTransmission(Driver_addr);
-    Wire.write(Reg_addr);
-    for (int i = 0; i < Length; i++) {
-      Wire.write(*Reg_data++);
-    }
-    if (Wire.endTransmission(true)) {
-      printf("The I2C transmission fails. - I2C Write\r\n");
-      xSemaphoreGive(wire_mutex); 
-      return false;
-    }
-    xSemaphoreGive(wire_mutex);
-    result = true;
-  } else {
-    printf("[DIAG] I2C_Write_Touch mutex timeout\r\n");
-  }
-  return result;
+  return I2C_Write(Driver_addr, Reg_addr, Reg_data, Length);
 }
 /*!
     @brief  handle interrupts

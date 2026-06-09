@@ -1,5 +1,6 @@
 #include "ui_pet_detail.h"
 #include "pet_sprites.h"
+#include "ui_helpers.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -53,11 +54,7 @@ void ui_pet_detail_create(lv_obj_t *parent_tile)
 {
     TRACE_DETAIL_ENTER();
     TRACE_DETAIL_HEAP();
-    lv_obj_set_style_bg_color(parent_tile, lv_color_hex(0x0A0A0F), 0);
-    lv_obj_set_style_pad_all(parent_tile, 0, 0);
-    lv_obj_set_style_border_width(parent_tile, 0, 0);
-    lv_obj_clear_flag(parent_tile, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_scrollbar_mode(parent_tile, LV_SCROLLBAR_MODE_OFF);
+    ui_style_tile(parent_tile);
 
     // --- Header area ---
     // 42px circular border container

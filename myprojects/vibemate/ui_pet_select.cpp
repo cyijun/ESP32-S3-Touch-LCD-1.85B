@@ -2,7 +2,8 @@
 #include "ui_pet_detail.h"
 #include "ui_pet.h"
 #include "pet_sprites.h"
-#include "pet_storage.h"
+#include "pet_manager.h"
+#include "ui_helpers.h"
 #include <Esp.h>
 #include <string.h>
 
@@ -89,13 +90,9 @@ static void build_face(char *buf, size_t buf_size, int species, int eye)
 static void apply_and_save(void)
 {
     TRACE_SELECT_ENTER();
-    g_pet.species = (PetSpecies)s_sel_species;
-    g_pet.eye = (PetEye)s_sel_eye;
-    g_pet.hat = (PetHat)s_sel_hat;
-    g_pet.color = (PetColor)s_sel_color;
-    pet_save();
-    ui_pet_detail_update();
-    ui_pet_update();
+    pet_set_appearance((PetSpecies)s_sel_species, (PetEye)s_sel_eye, (PetColor)s_sel_color);
+    pet_set_hat_select((PetHat)s_sel_hat);
+    TRACE_SELECT_EXIT();
 }
 
 // ========== Update functions ==========
@@ -254,10 +251,7 @@ void ui_pet_select_create(lv_obj_t *parent_tile)
 {
     TRACE_SELECT_ENTER();
     TRACE_SELECT_HEAP();
-    lv_obj_set_style_bg_color(parent_tile, lv_color_hex(0x0A0A0F), 0);
-    lv_obj_set_style_pad_all(parent_tile, 0, 0);
-    lv_obj_set_style_border_width(parent_tile, 0, 0);
-    lv_obj_clear_flag(parent_tile, LV_OBJ_FLAG_SCROLLABLE);
+    ui_style_tile(parent_tile);
 
     // Load current pet state
     s_sel_species = g_pet.species;
