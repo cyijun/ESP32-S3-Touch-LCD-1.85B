@@ -335,6 +335,7 @@ static void s_wiggle_cb(lv_timer_t *t)
     if (s_wiggle_step >= sizeof(angles) / sizeof(angles[0])) {
         lv_obj_set_style_transform_angle(s_label_sprite, 0, 0);
         s_wiggle_step = 0;
+        ui_anim_stop(&s_wiggle_timer);
         TRACE_INTERACT("wiggle done");
         TRACE_INTERACT_EXIT();
         return;
@@ -351,7 +352,8 @@ static void s_start_wiggle(void)
     TRACE_INTERACT_ENTER();
     ui_anim_stop(&s_wiggle_timer);
     s_wiggle_step = 0;
-    ui_anim_start_once(&s_wiggle_timer, s_wiggle_cb, 100);
+    lv_obj_set_style_transform_angle(s_label_sprite, 0, 0);
+    ui_anim_start_loop(&s_wiggle_timer, s_wiggle_cb, 100);
     TRACE_INTERACT_EXIT();
 }
 
@@ -364,6 +366,7 @@ static void s_jump_cb(lv_timer_t *t)
     if (s_jump_step >= sizeof(offsets) / sizeof(offsets[0])) {
         lv_obj_align(s_label_sprite, LV_ALIGN_CENTER, 0, 0);
         s_jump_step = 0;
+        ui_anim_stop(&s_jump_timer);
         TRACE_INTERACT("jump done");
         TRACE_INTERACT_EXIT();
         return;
@@ -378,7 +381,8 @@ static void s_start_jump(void)
     TRACE_INTERACT_ENTER();
     ui_anim_stop(&s_jump_timer);
     s_jump_step = 0;
-    ui_anim_start_once(&s_jump_timer, s_jump_cb, 90);
+    lv_obj_align(s_label_sprite, LV_ALIGN_CENTER, 0, 0);
+    ui_anim_start_loop(&s_jump_timer, s_jump_cb, 90);
     TRACE_INTERACT_EXIT();
 }
 
@@ -392,6 +396,7 @@ static void s_float_text_cb(lv_timer_t *t)
             s_float_text_label = NULL;
         }
         s_float_text_step = 0;
+        ui_anim_stop(&s_float_text_timer);
         TRACE_INTERACT("float_text done");
         return;
     }
@@ -421,7 +426,7 @@ static void s_show_float_text(const char *text)
     lv_obj_set_style_text_font(s_float_text_label, &lv_font_montserrat_12, 0);
     lv_obj_align(s_float_text_label, LV_ALIGN_CENTER, 0, -6);
     s_float_text_step = 0;
-    ui_anim_start_once(&s_float_text_timer, s_float_text_cb, 100);
+    ui_anim_start_loop(&s_float_text_timer, s_float_text_cb, 100);
     TRACE_INTERACT("text='%s'", text);
     TRACE_INTERACT_EXIT();
 }
